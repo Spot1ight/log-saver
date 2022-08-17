@@ -1,0 +1,9 @@
+p {
+    padding: 2px;
+    margin: 2px;
+    font-size: 15px;
+}
+
+ol {
+    list-style-position: outside;
+}

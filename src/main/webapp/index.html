@@ -1,0 +1,119 @@
+<html>
+<head>
+    <title>Log WebSocket</title>
+    <script src="resources/js/sockjs-0.3.4.js"></script>
+    <script src="resources/js/stomp.js"></script>
+    <script type="text/javascript">
+
+        var stompClient = null;
+
+        function setConnected(connected) {
+
+            document.getElementById('connect').disabled = connected;
+            document.getElementById('disconnect').disabled = !connected;
+            document.getElementById('conversationDiv').style.visibility = connected ? 'visible' : 'hidden';
+            document.getElementById('response').innerHTML = '';
+        }
+
+        function connect() {
+
+            var socket = new SockJS('/logs');
+            stompClient = Stomp.over(socket);
+
+          document.getElementById('command').addEventListener(
+                  "change", function () {
+                    var content = document.getElementById("content")
+                    if (this.value === "addLog") {
+                       content.style.visibility = 'visible'
+                    } else {
+                       content.style.visibility = 'hidden'
+                    }
+                  });
+
+            stompClient.connect({}, function (frame) {
+
+                setConnected(true);
+                console.log('Connected: ' + frame);
+            });
+        }
+
+        function disconnect() {
+
+            if (stompClient != null) {
+                stompClient.disconnect();
+            }
+
+            setConnected(false);
+            console.log("Disconnected");
+        }
+
+
+
+        function sendMessage() {
+
+            var command = document.getElementById('command').value;
+            var content = document.getElementById('content').value;
+            switch (command) {
+                case "addLog":
+                    stompClient.send("/app/logs", {}, JSON.stringify(
+                        {'command': command, 'content': content}
+                    ));
+                    break;
+                case "log":
+                    stompClient.subscribe('/app/topic/messages', function(messageOutput) {
+                        showMessageOutput(JSON.parse(messageOutput.body));
+                    });
+                    break;
+                default:
+                    break;
+            }
+
+        }
+
+        function showMessageOutput(messageOutput) {
+            const messages = messageOutput.messages;
+            let messLen = messages.length;
+
+            let text = "<ol type=\"1\">";
+            for (let i = 0; i < messLen; i++) {
+                text += "<li>" +
+                    "<p>Commands: " + messages[i].command + "</p>" +
+                    "<p>Content: " + messages[i].content + "</p>" +
+                    "<p>CreatedDate: " + messages[i].createdDate + "</p>" +
+                    "</li>"
+            }
+            text += "</ol>";
+
+            var response = document.getElementById('response');
+            response.innerHTML = text;
+        }
+
+    </script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body onload="disconnect()">
+
+<div>
+
+    <div>
+        <button id="connect" onclick="connect();">Connect</button>
+        <button id="disconnect" disabled="disabled" onclick="disconnect();">Disconnect</button>
+    </div>
+    <br/>
+    <div id="conversationDiv">
+        <label for="command">Выберите команду запроса: </label>
+        <p>
+            <select id="command" onchange="this.options[this.selectedIndex].value">
+                <option value="addLog">Добавить лог</option>
+                <option value="log">Показать логи</option>
+            </select>
+        </p>
+        <p><input type="text" id="content" style="visibility: hidden" placeholder="Напишите лог..."/></p>
+        <button id="sendMessage" onclick="sendMessage();">Send</button>
+        <p id="response"></p>
+    </div>
+</div>
+
+</body>
+</html>
